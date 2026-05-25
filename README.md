@@ -1,152 +1,187 @@
 # LicMan — FlexLM License Manager
 
+[English](#english) | [中文](#chinese)
+
 开源 EDA 提效工具 — 多主机 FlexNet/FlexLM 许可证集中管理系统。
 
-## 安装
+Open-source EDA productivity tool — centralized FlexNet/FlexLM license management across multiple hosts.
+
+---
+
+## English
+
+### What is LicMan?
+
+A web-based license management system for EDA (Electronic Design Automation) engineers managing FlexNet/FlexLM license servers. Manage multiple license servers across different hosts from a single browser panel — no more SSH-ing into each machine to edit license files.
+
+### Installation
 
 ```bash
 tar -xzf licman-*.tar.gz -C /opt/
 cd /opt/licman
-./install.sh                # 默认 58080 端口
-./install.sh -port 8080     # 指定端口
+./install.sh                # default port 58080
+./install.sh -port 8080     # custom port
 ```
 
-安装脚本自动：检测安装路径 → 更新 Python shebang 和配置文件路径 → 设置可执行权限 → 创建数据和日志目录。
+The installer auto-detects the install path, patches Python shebangs and port configs, and creates data/log directories.
 
-## 使用
+### Quick Start
 
 ```bash
 cd /opt/licman
-
-./bin/licman start          # 启动
-./bin/licman stop           # 停止
-./bin/licman status         # 查看状态
-./bin/licman restart        # 重启
-./bin/licman cleandb        # 清空数据库 (需先停止)
+./bin/licman start          # start
+./bin/licman stop           # stop
+./bin/licman restart        # restart
+./bin/licman status         # check status
 ```
 
-浏览器访问: `http://localhost:58080`
+Open browser: `http://localhost:58080`
 
-## 功能
+### Features
 
-### 许可证管理
-- 新增/编辑/删除/克隆 lmgrd 配置
-- 启动、停止 (lmdown)、重读 (lmreread) 许可证
-- 开机自启 (rc.local 自动写入)
-- 命令预览：编辑时实时显示 lmgrd 命令行
-- 文件浏览器：可视化选择 lmgrd 路径、license 文件、日志路径等
+**License Configuration Management**
+- Create, edit, clone, and delete lmgrd configurations
+- Start, stop (via lmdown), and reread (via lmreread) license daemons
+- Interactive file browser for selecting lmgrd binary, license file, log paths
+- Live command preview while editing configs
 
-### 厂商管理
-- 管理 Synopsys、Cadence 等 EDA 厂商的 daemon 配置
-- 每厂商可设定默认 daemon 路径 (写入 DAEMON 行第3列)
-- 每厂商可设定默认 Exclude/Options 文件 (写入 DAEMON 行第4列)
-- 厂商可按主机分组：不同主机可有不同的 daemon 路径和 exclude 文件
+**Vendor Management**
+- Manage EDA vendor daemons (Synopsys snpslmd, Cadence cdslmd, etc.)
+- Define default daemon binary path per vendor (written to DAEMON line column 3)
+- Define default exclude/options file per vendor (written to DAEMON line column 4)
+- Host-specific vendor configurations for multi-host environments
 
-### 用量监控
-- 实时展示各 feature 的 license 总量、使用中、使用率
-- 查看每个 feature 的当前用户列表 (用户名/主机/终端/版本)
-- 自动刷新 (5s / 10s / 30s / 60s 可选)
-- 使用率超 85% 仪表盘告警
+**Real-time Usage Monitoring**
+- View live feature-level license usage (total, in-use, utilization %)
+- Inspect current users per feature (username, host, display, daemon version)
+- Auto-refresh with configurable intervals
+- Dashboard alerts when usage exceeds 85%
 
-### 多主机管理
-- 添加多台主机 (IP、SSH 端口、用户名、密码)
-- SSH 连通性测试
-- 远程文件浏览、license 文件预览、DAEMON 行检测均通过 SSH 透明支持
-- SSH ControlMaster 连接复用，减少握手开销
-- 配置可按主机分组，仪表盘自动按主机拆分显示
+**Multi-Host Management**
+- Add remote hosts with SSH credentials
+- Transparent SSH-based file browsing, license file preview, and DAEMON line detection
+- SSH ControlMaster connection multiplexing for reduced latency
+- Per-host config grouping on the dashboard
 
-### DAEMON 行自动写入
-- 编辑配置后自动检测 license 文件中的 DAEMON/VENDOR 行
-- 显示第 3 列 (daemon 路径) 和第 4 列 (exclude 文件) 的当前值与配置值的冲突
-- 无冲突时自动填入，有冲突时提示用户确认后强制写入
-- 写入前自动创建 `.bak` 备份
-- 同时支持更新 SERVER 行第 2 列 (主机名)
+**DAEMON/VENDOR Line Auto-Injection**
+- Auto-detect existing DAEMON/VENDOR lines in license files
+- Smart conflict detection: shows current vs. configured values for daemon path (col 3) and exclude file (col 4)
+- Prompts user before overwriting existing values
+- Auto-creates `.bak` backup before writing
+- Also updates SERVER line hostname (line 1, col 2)
 
-### 许可证过期提醒
-- 解析 license 文件中 INCREMENT/FEATURE 行的到期日
-- 每配置显示最早过期项，在仪表盘以折叠面板展示
-- 可配置告警天数 (全局设置)
+**License Expiry Alerts**
+- Parses INCREMENT/FEATURE rows for expiration dates
+- Shows earliest expiring feature per configuration on the dashboard
+- Configurable warning threshold (default 30 days)
 
-### 邮件通知
-- 配置 SMTP 后：许可证即将过期自动发邮件
-- 使用率超 90% 自动发邮件
-- 设置页可发送测试邮件验证配置
+**Email Notifications**
+- Configure SMTP; auto-send on license expiry or >90% utilization
+- Test email button for verification
 
-### 使用率趋势
-- 双视图切换：按厂商查看 / 按 Feature 查看
-- 柱状图展示 6h / 24h / 3d / 7d 的用量变化
-- 手动记录快照或配置 cron 自动记录
+**Usage Trends**
+- Dual view: by vendor (aggregate) or by individual feature
+- Bar charts for 6h / 24h / 3d / 7d time windows
+- Manual snapshot recording or cron-based automation
 
-### 数据管理
-- 一键导出备份 (JSON，包含全部配置、厂商、主机、设置、日志)
-- 一键导入还原 (支持合并/替换两种模式)
-- CSV 报表导出 (包含所有用量快照记录)
-- 配置克隆：一键复制现有配置，改个名字就能用
+**Data Management**
+- One-click backup: exports all configs, vendors, hosts, settings, logs as JSON
+- One-click restore: merges or replaces existing data
+- CSV report export for usage history
+- Config cloning: duplicate a configuration with a single click
 
-### 其他
-- Web 终端：浏览器内直接操作服务器 shell
-- Debug 日志实时 tail -f 查看器
-- 操作日志：记录所有配置变更操作
+**Extras**
+- Web terminal: full shell access in-browser via xterm.js + Socket.IO
+- Debug log viewer with live tail (SSE)
+- Operation audit log
 
-## Cron 自动用量快照
+### Cron Usage Snapshots
 
 ```bash
-# 每 10 分钟记录一次
+# Record usage snapshot every 10 minutes
 */10 * * * * curl -s http://localhost:58080/api/usage/snapshot > /dev/null
-
-# 每天早上 9 点发送过期提醒邮件
-0 9 * * * curl -s http://localhost:58080/api/expiry/alerts > /dev/null
 ```
 
-## 文件结构
+### Tech Stack
+
+| Component | Technology |
+|---|---|
+| Backend | Python 3.12 / Flask / Flask-SocketIO |
+| Database | SQLite3 |
+| Frontend | Vanilla HTML/CSS/JS (no framework, zero CDN deps) |
+| Terminal | xterm.js + Socket.IO |
+| Remote Ops | SSH + sshpass |
+
+### Project Structure
 
 ```
 licman/
-├── app/                   # Flask 应用
-│   ├── server.py          # 路由入口
-│   ├── config.py          # 配置 CRUD + lmgrd 命令构建
-│   ├── vendor.py          # 厂商 CRUD + 数据库初始化
-│   ├── flexlm.py          # FlexLM 命令 (lmgrd/lmstat/lmdown/lmreread)
-│   ├── filesystem.py      # 文件浏览 (本地 + SSH 远程)
-│   ├── remote.py           # SSH 文件读写抽象层
-│   ├── license_parser.py  # License 文件过期解析
-│   ├── license_writer.py  # DAEMON/SERVER 行检测与写入
-│   ├── host.py            # 主机管理 CRUD
-│   ├── settings.py        # 全局设置 KV
-│   ├── backup.py          # 备份还原
-│   ├── notify.py          # 邮件通知 (SMTP)
-│   ├── logger.py          # 操作日志
-│   ├── run.py             # 入口
-│   ├── static/
-│   │   ├── style.css      # 暗色主题样式
-│   │   ├── app.js         # 前端逻辑
-│   │   └── socket.io.js   # WebSocket 客户端
-│   └── templates/         # Jinja2 页面模板
-│       ├── base.html      # 顶栏布局
-│       ├── dashboard.html # 仪表盘 (主机分组、过期告警)
-│       ├── config_edit.html    # 配置编辑 (文件预览、DAEMON 检测)
-│       ├── vendor_list.html    # 厂商管理 (主机分组)
-│       ├── monitor.html        # 用量监控
-│       ├── host_list.html      # 主机管理
-│       ├── trends.html         # 使用率趋势 (双视图)
-│       ├── settings.html       # 全局设置 + 备份还原 + 邮件
-│       ├── logs.html           # 操作日志
-│       ├── log_viewer.html     # Debug 日志 tail
-│       └── terminal.html       # Web 终端
-├── bin/licman             # 控制脚本 (start/stop/restart/status/cleandb)
-├── python/                # 嵌入式 Python 3.12
-├── install.sh             # 安装脚本
-└── data/                  # SQLite 数据库 (自动创建)
+├── app/
+│   ├── server.py           # Route & API entry
+│   ├── config.py           # Config CRUD
+│   ├── vendor.py           # Vendor CRUD + DB init
+│   ├── flexlm.py           # lmgrd/lmstat/lmdown/lmreread wrappers
+│   ├── filesystem.py       # File browser (local + SSH)
+│   ├── remote.py           # SSH file read/write abstraction
+│   ├── license_parser.py   # License expiry parser
+│   ├── license_writer.py   # DAEMON/SERVER line detection & injection
+│   ├── host.py             # Host management
+│   ├── settings.py         # Key-value settings store
+│   ├── backup.py           # Backup/restore
+│   ├── notify.py           # SMTP email notifications
+│   ├── logger.py           # Operation log
+│   ├── run.py              # Entry point
+│   ├── static/             # CSS / JS / assets
+│   └── templates/          # Jinja2 HTML templates (14 pages)
+├── bin/licman              # Control script
+├── python/                 # Embedded Python 3.12
+├── install.sh              # Auto-configuring installer
+└── data/                   # SQLite DB (auto-created)
 ```
 
-## 依赖
+### Requirements
 
-- Python 3.8+ (附带嵌入式 3.12)
+- Python 3.8+ (embedded 3.12 included)
 - Flask, Flask-SocketIO
-- FlexLM 工具: lmgrd, lmstat, lmdown, lmreread
-- sshpass (可选，远程主机密码认证)
-- SQLite3 (系统自带)
+- FlexLM utilities: lmgrd, lmstat, lmdown, lmreread
+- sshpass (optional, for password-based SSH)
+- SQLite3 (system built-in)
 
-## License
+### License
 
-Internal use.
+MIT License — see [LICENSE](LICENSE) file.
+
+---
+
+## 中文
+
+### 什么是 LicMan
+
+面向 EDA 工程师的 FlexNet/FlexLM 许可证 Web 管理系统。一个浏览器面板管理多台主机上的 license server，不再需要 SSH 到每台机器手动编辑 license 文件。
+
+### 安装与使用
+
+同上 — 解压后运行 `./install.sh [-port PORT]`，然后 `./bin/licman start`，浏览器访问 `http://localhost:58080`。
+
+### 功能概览
+
+| 模块 | 功能 |
+|---|---|
+| 许可证管理 | 新建 / 编辑 / 克隆 / 删除 lmgrd 配置，启动 / 停止 / 重读 |
+| 厂商管理 | 按主机分组管理 daemon 路径和 exclude 文件 |
+| 用量监控 | 实时 feature 用量 + 用户列表 + 自动刷新 |
+| 多主机 | SSH 远程：文件浏览、license 预览、DAEMON 检测、端口检测 |
+| DAEMON 行 | 智能检测冲突 → 用户确认 → 自动写入 → .bak 备份 |
+| 过期提醒 | 解析 license 到期日，仪表盘告警 |
+| 邮件通知 | SMTP 配置，过期或使用率超 90% 自动发邮件 |
+| 使用率趋势 | 双视图（按厂商 / 按 Feature），柱状图 |
+| 备份还原 | JSON 一键导出/导入，CSV 报表 |
+| Web 终端 | 浏览器内操作 shell |
+
+### 作者
+
+EDA 运维工程师 + Claude (Anthropic) 协同开发。
+
+### 许可证
+
+MIT License — 任意使用、修改、分发。

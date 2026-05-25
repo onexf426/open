@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>使用率</h2>
+  <div class="header-actions">
+    <select id="trend-vendor" onchange="loadTrends()" style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px;">
+      <option value="">全部厂商</option>
+    </select>
+    <select id="trend-hours" onchange="loadTrends()" style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px;">
+      <option value="6">6 小时</option>
+      <option value="24" selected>24 小时</option>
+      <option value="72">3 天</option>
+      <option value="168">7 天</option>
+    </select>
+    <select id="trend-view" onchange="loadTrends()" style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px;">
+      <option value="vendor">按厂商</option>
+      <option value="feature">按 Feature</option>
+    </select>
+    <button class="btn btn-sm btn-outline" onclick="snapshotUsage()">&#128200; 记录快照</button>
+  </div>
+</div>
+
+<div class="section">
+  <div id="usage-charts" style="display:flex;flex-direction:column;gap:20px;">
+    <div class="empty-state">加载中...</div>
+  </div>
+</div>
+
+<script>
+var chartColors = ['#7aa2f7','#9ece6a','#e0af68','#f7768e','#bb9af7','#7dcfff','#ff9e64','#73daca','#c0caf5','#565f89'];
+
+function loadVendors() {
+  fetch('/api/usage/vendors')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var sel = document.getElementById('trend-vendor');
+      d.vendors.forEach(function(v){
+        var opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        sel.appendChild(opt);
+      });
+      loadTrends();
+    });
+}
+
+function loadTrends() {
+  var vendor = document.getElementById('trend-vendor').value;
+  var hours = document.getElementById('trend-hours').value;
+  var view = document.getElementById('trend-view').value;
+  var container = document.getElementById('usage-charts');
+  container.innerHTML = '<div class="empty-state">加载中...</div>';
+
+  var url = '/api/usage/trends?hours=' + hours;
+  if (vendor) url += '&vendor=' + encodeURIComponent(vendor);
+
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.vendors || Object.keys(d.vendors).length === 0) {
+        container.innerHTML = '<div class="empty-state">暂无用量数据。点击"记录快照"开始收集。</div>';
+        return;
+      }
+      container.innerHTML = '';
+
+      if (view === 'vendor') {
+        // === Per-Vendor View: each vendor is a card, features inside ===
+        for (var vname in d.vendors) {
+          var features = d.vendors[vname];
+          var fnames = Object.keys(features);
+          var card = makeCard(vname + ' (' + fnames.length + ' features)');
+          var ci = 0;
+          fnames.forEach(function(fname){
+            var color = chartColors[ci % chartColors.length]; ci++;
+            card.appendChild(makeFeatureChart(fname, features[fname], color));
+          });
+          container.appendChild(card);
+        }
+      } else {
+        // === Per-Feature View: each feature is its own card ===
+        var allFeatures = [];
+        for (var vname in d.vendors) {
+          for (var fname in d.vendors[vname]) {
+            allFeatures.push({vendor: vname, feature: fname, data: d.vendors[vname][fname]});
+          }
+        }
+        allFeatures.sort(function(a,b){ return a.feature.localeCompare(b.feature); });
+        var ci = 0;
+        allFeatures.forEach(function(f){
+          var color = chartColors[ci % chartColors.length]; ci++;
+          var card = makeCard(f.feature + ' <span style="font-size:10px;color:var(--text-muted);">(' + f.vendor + ')</span>');
+          card.appendChild(makeFeatureChart(f.feature, f.data, color));
+          container.appendChild(card);
+        });
+      }
+    });
+}
+
+function makeCard(title) {
+  var card = document.createElement('div');
+  card.className = 'form-section';
+  var h4 = document.createElement('h4');
+  h4.innerHTML = title;
+  card.appendChild(h4);
+  return card;
+}
+
+function makeFeatureChart(label, data, color) {
+  var div = document.createElement('div');
+  div.style.cssText = 'margin-bottom:6px;';
+
+  var lbl = document.createElement('div');
+  lbl.style.cssText = 'font-size:10px;color:' + color + ';margin-bottom:3px;';
+  lbl.textContent = '';
+  div.appendChild(lbl);
+
+  if (data.length > 1) {
+    var maxPct = Math.max.apply(null, data.map(function(p){ return p.pct; })) || 0;
+    var chartDiv = document.createElement('div');
+    chartDiv.style.cssText = 'display:flex;align-items:flex-end;gap:1px;height:60px;';
+    data.forEach(function(p){
+      var h = Math.max(2, Math.round(p.pct * 0.6));
+      var bar = document.createElement('div');
+      bar.title = p.time + ' ' + p.pct + '%';
+      bar.style.cssText = 'flex:1;min-width:1px;height:' + h + 'px;background:' + color + ';border-radius:1px 1px 0 0;opacity:0.8;';
+      chartDiv.appendChild(bar);
+    });
+    div.appendChild(chartDiv);
+    var timeDiv = document.createElement('div');
+    timeDiv.style.cssText = 'font-size:8px;color:var(--text-muted);display:flex;justify-content:space-between;';
+    timeDiv.innerHTML = '<span>' + data[0].time + '</span><span>' + maxPct + '%</span><span>' + data[data.length-1].time + '</span>';
+    div.appendChild(timeDiv);
+  } else {
+    div.innerHTML = '<span style="font-size:10px;color:var(--text-dim);">仅1个数据点: ' + data[0].pct + '%</span>';
+  }
+  return div;
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  if (document.getElementById('usage-charts')) loadVendors();
+});
+</script>
+{% endblock %}

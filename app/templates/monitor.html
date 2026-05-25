@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>用量监控</h2>
+  <div class="header-actions">
+    {% if configs %}
+    <select id="monitor-config-select" onchange="switchMonitorConfig()">
+      <option value="">-- 选择运行中的配置 --</option>
+      {% for c in configs %}
+      <option value="{{ c.id }}" {% if active_config_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <button class="btn btn-sm btn-outline" onclick="refreshMonitor()">&#8635; 刷新</button>
+    <label class="checkbox-label" style="margin-left:6px;">
+      <input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> 自动
+    </label>
+    <select id="refresh-interval" onchange="setRefreshInterval()" style="width:auto;padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px;">
+      <option value="5">5s</option>
+      <option value="10">10s</option>
+      <option value="30">30s</option>
+      <option value="60">60s</option>
+    </select>
+  </div>
+</div>
+
+<div class="stats-row" id="monitor-summary" style="display:none;">
+  <div class="stat-card blue"><div class="stat-value" id="sum-features">-</div><div class="stat-label">功能数</div></div>
+  <div class="stat-card blue"><div class="stat-value" id="sum-total">-</div><div class="stat-label">总授权</div></div>
+  <div class="stat-card yellow"><div class="stat-value" id="sum-used">-</div><div class="stat-label">使用中</div></div>
+  <div class="stat-card green"><div class="stat-value" id="sum-rate">-</div><div class="stat-label">使用率</div></div>
+</div>
+
+<div class="section">
+  <table class="data-table" id="feature-table">
+    <thead>
+      <tr><th>#</th><th>功能</th><th>厂商</th><th>版本</th><th>总量</th><th>在用</th><th>使用率</th></tr>
+    </thead>
+    <tbody id="feature-body">
+      <tr><td colspan="7" class="empty-state">请选择一个运行中的配置查看功能用量。</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal" id="user-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>用户列表: <span id="user-feature-name"></span></h3>
+      <button class="modal-close" onclick="closeModal('user-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <table class="data-table">
+        <thead><tr><th>用户</th><th>主机</th><th>终端</th><th>版本</th></tr></thead>
+        <tbody id="user-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

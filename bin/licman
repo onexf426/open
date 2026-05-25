@@ -1,0 +1,116 @@
+#!/bin/bash
+# LicMan - FlexLM License Manager Control Script
+
+LICMAN_HOME="/opt/licman"
+PYTHON="$LICMAN_HOME/python/bin/python3"
+RUN_SCRIPT="$LICMAN_HOME/app/run.py"
+PID_FILE="$LICMAN_HOME/data/licman.pid"
+LOG_FILE="$LICMAN_HOME/logs/licman.log"
+HOST="0.0.0.0"
+PORT="58080"
+
+start() {
+    if [ -f "$PID_FILE" ]; then
+        pid=$(cat "$PID_FILE")
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "LicMan is already running (PID: $pid)"
+            echo "Access at http://localhost:$PORT"
+            return 1
+        fi
+        rm -f "$PID_FILE"
+    fi
+
+    echo "Starting LicMan..."
+    cd "$LICMAN_HOME"
+    nohup "$PYTHON" "$RUN_SCRIPT" >> "$LOG_FILE" 2>&1 &
+    echo $! > "$PID_FILE"
+    sleep 1
+    pid=$(cat "$PID_FILE")
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "LicMan started (PID: $pid)"
+        echo "Access at http://localhost:$PORT"
+        echo "Log file: $LOG_FILE"
+    else
+        echo "LicMan failed to start. Check $LOG_FILE"
+        rm -f "$PID_FILE"
+        return 1
+    fi
+}
+
+stop() {
+    if [ ! -f "$PID_FILE" ]; then
+        echo "LicMan is not running (no PID file)"
+        return 1
+    fi
+    pid=$(cat "$PID_FILE")
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "LicMan is not running (stale PID file)"
+        rm -f "$PID_FILE"
+        return 1
+    fi
+    echo "Stopping LicMan (PID: $pid)..."
+    kill "$pid"
+    for i in $(seq 1 10); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            echo "LicMan stopped"
+            rm -f "$PID_FILE"
+            return 0
+        fi
+        sleep 1
+    done
+    echo "LicMan didn't stop gracefully, force killing..."
+    kill -9 "$pid" 2>/dev/null
+    rm -f "$PID_FILE"
+    echo "LicMan force stopped"
+}
+
+status() {
+    if [ -f "$PID_FILE" ]; then
+        pid=$(cat "$PID_FILE")
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "LicMan is running (PID: $pid)"
+            echo "Access at http://localhost:$PORT"
+        else
+            echo "LicMan is stopped (stale PID file)"
+            rm -f "$PID_FILE"
+        fi
+    else
+        echo "LicMan is stopped"
+    fi
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+cleandb() {
+    if [ -f "$PID_FILE" ]; then
+        pid=$(cat "$PID_FILE")
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "请先停止 LicMan 再清理数据库"
+            return 1
+        fi
+    fi
+    DB_FILE="$LICMAN_HOME/data/licman.db"
+    if [ -f "$DB_FILE" ]; then
+        rm -f "$DB_FILE"
+        echo "数据库已清理 ($DB_FILE)"
+        echo "下次启动时将自动重建"
+    else
+        echo "数据库文件不存在，无需清理"
+    fi
+}
+
+case "${1:-}" in
+    start)    start ;;
+    stop)     stop ;;
+    status)   status ;;
+    restart)  restart ;;
+    cleandb)  cleandb ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart|cleandb}"
+        exit 1
+        ;;
+esac

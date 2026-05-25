@@ -1,0 +1,8 @@
+需要放到/opt下
+cd bin
+./licman -h
+./licman start
+
+访问IP:58080
+
+如需修改密码编辑app/run.py修改其中端口号即可

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>{% if config %}编辑{% else %}新建{% endif %}配置</h2>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline">&larr; 返回</a>
+</div>
+
+<div class="edit-layout">
+  <form class="config-form" id="config-form" method="POST" action="{{ url_for('api_config_save') }}">
+    {% if config %}<input type="hidden" name="id" value="{{ config.id }}">{% endif %}
+
+    <div class="form-section">
+      <h4>基本信息</h4>
+      <div class="field">
+        <label>配置名称</label>
+        <input type="text" name="name" value="{{ config.name if config else '' }}" required placeholder="例如: Synopsys-Core">
+      </div>
+      <div class="field">
+        <label>厂商</label>
+        <div class="input-group">
+          <select name="vendor_id" id="vendor-select" onchange="onVendorChange()">
+            <option value="">-- 选择厂商 --</option>
+            {% for v in vendors %}
+            <option value="{{ v.id }}" {% if config and config.vendor_id == v.id %}selected{% endif %}
+              data-daemon-path="{{ v.default_daemon_path or '' }}"
+              data-exclude-path="{{ v.default_exclude_path or '' }}"
+              data-daemon-name="{{ v.daemon_name }}">
+              {{ v.daemon_name }} ({{ v.vendor_name }})
+            </option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn btn-sm btn-outline" onclick="quickAddVendor()">+ 新增</button>
+        </div>
+        <div id="quick-vendor-form" style="display:none; margin-top:8px; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:4px;">
+          <input type="text" id="quick-daemon" placeholder="Daemon 名称 (例如: snpslmd)">
+          <input type="text" id="quick-vendor-name" placeholder="厂商名称 (例如: Synopsys)">
+          <input type="text" id="quick-daemon-path" placeholder="默认 Daemon 路径 (可选)">
+          <button type="button" class="btn btn-sm btn-primary" onclick="saveQuickVendor()">保存厂商</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>所属主机</label>
+        <select name="host_id" id="host-select">
+          <option value="">-- 本地 --</option>
+          {% for h in hosts %}
+          <option value="{{ h.id }}" data-hostname="{{ h.hostname }}" {% if config and config.host_id == h.id %}selected{% endif %}>{{ h.name }} ({{ h.hostname }})</option>
+          {% endfor %}
+        </select>
+        <div class="form-text" id="server-hostname-hint" style="{% if not config or not config.host_id %}display:none{% endif %}">
+          将写入 license SERVER 行: SERVER <b id="server-hostname-preview">-</b> ...
+          <input type="hidden" name="server_hostname" id="server-hostname-value">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>文件路径</h4>
+      <div class="field">
+        <label>lmgrd 路径</label>
+        <div class="input-group">
+          <input type="text" name="lmgrd_path" value="{{ config.lmgrd_path if config else '' }}" required>
+          <button type="button" class="btn btn-sm btn-outline browse-btn" data-target="input[name='lmgrd_path']">浏览</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>License 文件</label>
+        <div class="input-group">
+          <input type="text" name="license_file" value="{{ config.license_file if config else '' }}" required onchange="previewLicense(this.value)">
+          <button type="button" class="btn btn-sm btn-outline browse-btn" data-target="input[name='license_file']">浏览</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Daemon 路径 (DAEMON/VENDOR 行第3列)</label>
+        <div class="input-group">
+          <input type="text" name="daemon_path" value="{{ config.daemon_path if config else '' }}" placeholder="选择厂商后自动填入默认路径">
+          <button type="button" class="btn btn-sm btn-outline browse-btn" data-target="input[name='daemon_path']">浏览</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Exclude 文件 (DAEMON/VENDOR 行第4列)</label>
+        <div class="input-group">
+          <input type="text" name="options_file" value="{{ config.options_file if config else '' }}" placeholder="选择厂商后自动填入厂商默认 exclude 路径">
+          <button type="button" class="btn btn-sm btn-outline browse-btn" data-target="input[name='options_file']">浏览</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Debug 日志路径</label>
+        <div class="input-group">
+          <input type="text" name="log_path" value="{{ config.log_path if config else '' }}">
+          <button type="button" class="btn btn-sm btn-outline browse-btn" data-target="input[name='log_path']">浏览</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>高级选项</h4>
+      <div class="field">
+        <label>额外参数</label>
+        <input type="text" name="extra_args" value="{{ config.extra_args if config else '' }}" placeholder="例如: -x lmdown -x lmremove">
+      </div>
+      <div class="field">
+        <label class="checkbox-label">
+          <input type="checkbox" name="auto_start" {% if config and config.auto_start %}checked{% endif %}>
+          启用开机自启 (rc.local)
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">保存配置</button>
+      <button type="button" class="btn btn-success" id="save-start-btn">保存并启动</button>
+      <button type="button" class="btn btn-outline" id="daemon-check-btn" onclick="checkDaemonLine()">检测 DAEMON 行</button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline">取消</a>
+    </div>
+  </form>
+
+  <div class="command-preview">
+    <h4>License 文件预览 <button type="button" style="font-size:10px;padding:1px 6px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;float:right;" onclick="var lic=document.querySelector('input[name=license_file]');if(lic)previewLicense(lic.value);">刷新</button></h4>
+    <pre id="license-preview" style="background:var(--bg);padding:8px;border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--text-dim);max-height:180px;overflow-y:auto;white-space:pre-wrap;min-height:40px;">填写 license 文件路径后显示</pre>
+    <h4 style="margin-top:12px;">命令预览</h4>
+    <pre id="cmd-preview">$ </pre>
+    <div id="daemon-check-result" style="margin-top:10px;font-size:11px;font-family:var(--mono);"></div>
+    <div style="margin-top:10px;">
+      <button type="button" class="btn btn-sm btn-info" onclick="checkPort()">检测端口</button>
+    </div>
+    <div id="port-check-result" style="margin-top:8px;font-size:11px;font-family:var(--mono);"></div>
+  </div>
+</div>
+{% endblock %}

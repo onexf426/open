@@ -1,0 +1,10 @@
+data/
+logs/
+__pycache__/
+*.pyc
+*.pyo
+*.bak
+.venv/
+*.egg-info/
+dist/
+*.tar.gz

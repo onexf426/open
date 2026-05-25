@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>日志查看: {{ config.name }}</h2>
+  <div class="header-actions">
+    <span style="color:var(--text-dim);font-size:11px;font-family:var(--mono);">{{ config.log_path or '未配置日志路径' }}</span>
+    <button class="btn btn-sm btn-outline" id="pause-btn" onclick="togglePause()">&#9646;&#9646; 暂停</button>
+    <button class="btn btn-sm btn-outline" onclick="scrollToBottom()">&#8595; 到底</button>
+    <button class="btn btn-sm btn-outline" onclick="clearLog()">清屏</button>
+  </div>
+</div>
+<div class="section">
+  <div id="log-container" class="log-viewer">
+    <pre id="log-content">加载中...</pre>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>仪表盘</h2>
+  <a href="{{ url_for('config_new') }}" class="btn btn-primary">+ 新建配置</a>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card green"><div class="stat-value">{{ stats.running }}</div><div class="stat-label">运行中</div></div>
+  <div class="stat-card red"><div class="stat-value">{{ stats.stopped }}</div><div class="stat-label">已停止</div></div>
+  <div class="stat-card blue"><div class="stat-value">{{ stats.total }}</div><div class="stat-label">总配置数</div></div>
+  <div class="stat-card yellow"><div class="stat-value" id="alert-count">-</div><div class="stat-label">使用率告警</div></div>
+  <div class="stat-card orange"><div class="stat-value">{{ expiry_alerts|length }}</div><div class="stat-label">过期告警</div></div>
+</div>
+
+{% if expiry_alerts %}
+<div class="section">
+  <h3 style="cursor:pointer" onclick="var s=document.getElementById('expiry-section');s.style.display=s.style.display==='none'?'':'none'">
+    许可证过期提醒 ({{ expiry_alerts|length }})
+  </h3>
+  <div id="expiry-section">
+    {% for a in expiry_alerts %}
+    <div class="alert-item {% if a.get('expired') %}expired{% endif %}" style="margin-bottom:3px;">
+      <span class="alert-badge">{% if a.get('expired') %}过期{% elif a.days_left == 0 %}今日{% else %}{{ a.days_left }}天{% endif %}</span>
+      <span class="alert-text"><span class="alert-config">{{ a.config_name }}</span>{% if a.daemon_name %} ({{ a.daemon_name }}){% endif %} — {{ a.exp_date }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if grouped %}
+  {% for host_label, host_configs in grouped.items() %}
+  <div class="section">
+    <h3 class="host-section-header">
+      {% if host_label == '本机' %}&#127968; 本机{% else %}&#128421; {{ host_label }}{% endif %}
+      <span class="host-config-count">{{ host_configs|length }} 个配置</span>
+    </h3>
+    <div class="card-list">
+      {% for c in host_configs %}
+      <div class="config-card {% if c.status == 'running' %}running{% else %}stopped{% endif %}">
+        <div class="config-status">
+          <span class="status-dot {% if c.status == 'running' %}on{% else %}off{% endif %}"></span>
+        </div>
+        <div class="config-info">
+          <div class="config-name">{{ c.name }}</div>
+          <div class="config-meta">
+            {% if c.status == 'running' and c.pid %}<span>PID: {{ c.pid }}</span>{% endif %}
+            <span>{{ c.daemon_name or '-' }}</span>
+            <span class="config-path">{{ c.license_file or '' }}</span>
+          </div>
+        </div>
+        <div class="config-actions">
+          <button class="btn btn-sm btn-success" onclick="doAction({{ c.id }}, 'start')" title="启动">&#9654;</button>
+          <button class="btn btn-sm btn-danger" onclick="doAction({{ c.id }}, 'stop')" title="停止">&#9632;</button>
+          <button class="btn btn-sm btn-warning" onclick="doAction({{ c.id }}, 'reread')" title="重读">&#8635;</button>
+          <button class="btn btn-sm btn-info" onclick="doAction({{ c.id }}, 'enable')" title="开机自启">&#9883;</button>
+          <a href="{{ url_for('monitor_config', config_id=c.id) }}" class="btn btn-sm btn-outline" title="监控">&#9670;</a>
+          {% if c.log_path %}<a href="{{ url_for('log_viewer', config_id=c.id) }}" class="btn btn-sm btn-outline" title="日志">&#9776;</a>{% endif %}
+          <a href="{{ url_for('config_edit', config_id=c.id) }}" class="btn btn-sm btn-outline" title="编辑">&#9998;</a>
+          <button class="btn btn-sm btn-outline" onclick="cloneConfig({{ c.id }}, '{{ c.name }}')" title="克隆">&#128203;</button>
+          <button class="btn btn-sm btn-outline" onclick="doAction({{ c.id }}, 'delete')" title="删除">&#10005;</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">暂无配置，<a href="{{ url_for('config_new') }}">点此创建</a>。</div>
+{% endif %}
+
+<div class="section">
+  <h3>最近操作</h3>
+  <div class="log-list">
+    {% for log in recent_logs %}
+    <div class="log-row">
+      <span class="log-time">{{ log.created_at }}</span>
+      <span class="log-config">{{ log.config_name }}</span>
+      <span class="log-action">{{ log.action }}</span>
+      <span class="log-status {% if log.status == 'SUCCESS' %}ok{% else %}fail{% endif %}">{{ log.status }}</span>
+      <span class="log-detail">{{ log.detail or '' }}</span>
+    </div>
+    {% else %}
+    <div class="empty-state">暂无操作记录。</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

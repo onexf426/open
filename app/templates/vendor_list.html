@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>厂商管理</h2>
+</div>
+
+{% if vgrouped %}
+  {% for host_label, host_vendors in vgrouped.items() %}
+  <div class="section">
+    <h3 class="host-section-header">
+      {% if host_label == '通用' %}&#127760; 通用 (未关联主机){% else %}&#128421; {{ host_label }}{% endif %}
+      <span class="host-config-count">{{ host_vendors|length }} 个厂商</span>
+    </h3>
+    <div class="card-list">
+      {% for v in host_vendors %}
+      <div class="config-card" id="vendor-{{ v.id }}">
+        <div class="config-info">
+          <div class="config-name">{{ v.daemon_name }}</div>
+          <div class="config-meta">
+            <span>{{ v.vendor_name }}</span>
+            <span class="config-path">{{ v.default_daemon_path or '未设置 daemon 路径' }}</span>
+            {% if v.default_exclude_path %}<span class="config-path">{{ v.default_exclude_path }}</span>{% endif %}
+            <span>{{ v.config_count }} 个配置</span>
+          </div>
+        </div>
+        <div class="config-actions">
+          <button class="btn btn-sm btn-outline" onclick="editVendor({{ v.id }}, '{{ v.daemon_name }}', '{{ v.vendor_name }}', '{{ v.default_daemon_path or '' }}', '{{ v.default_exclude_path or '' }}', {{ v.host_id or 'null' }})">编辑</button>
+          <button class="btn btn-sm btn-outline" onclick="deleteVendor({{ v.id }})">删除</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">暂无注册厂商。</div>
+{% endif %}
+
+<div class="section">
+  <h3>添加厂商</h3>
+  <form class="config-form" id="vendor-form" style="max-width:520px;">
+    <input type="hidden" name="id" id="vendor-id">
+    <div class="field">
+      <label>Daemon 名称</label>
+      <input type="text" name="daemon_name" id="vendor-daemon" required placeholder="例如: snpslmd">
+    </div>
+    <div class="field">
+      <label>厂商名称</label>
+      <input type="text" name="vendor_name" id="vendor-name" required placeholder="例如: Synopsys">
+    </div>
+    <div class="field">
+      <label>所属主机</label>
+      <select name="host_id" id="vendor-host">
+        <option value="">-- 通用 (不限主机) --</option>
+        {% for h in hosts %}
+        <option value="{{ h.id }}">{{ h.name }} ({{ h.hostname }})</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">关联主机后，该厂商的 daemon/exclude 路径仅对该主机生效</div>
+    </div>
+    <div class="field">
+      <label>默认 Daemon 路径 (写入 DAEMON/VENDOR 行第3列)</label>
+      <div class="input-group">
+        <input type="text" name="default_daemon_path" id="vendor-path" placeholder="例如: /eda/synopsys/scl/amd64/bin/snpslmd">
+        <button type="button" class="btn btn-sm btn-outline browse-btn" data-target="#vendor-path">浏览</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>默认 Exclude/Options 文件 (写入 DAEMON/VENDOR 行第4列)</label>
+      <div class="input-group">
+        <input type="text" name="default_exclude_path" id="vendor-exclude" placeholder="例如: /opt/licman/exclude/snpslmd.opt">
+        <button type="button" class="btn btn-sm btn-outline browse-btn" data-target="#vendor-exclude">浏览</button>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">保存厂商</button>
+      <button type="button" class="btn btn-outline" onclick="resetVendorForm()">重置</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

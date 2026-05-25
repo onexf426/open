@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>Web 终端</h2>
+  <span style="color:var(--text-dim);font-size:11px;">连接到服务器 shell</span>
+</div>
+<div class="section">
+  <div id="terminal-container"></div>
+</div>
+<script src="{{ url_for('static', filename='socket.io.js') }}"></script>
+{% endblock %}

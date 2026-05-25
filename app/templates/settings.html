@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>全局设置</h2>
+</div>
+
+<div class="edit-layout">
+  <div style="flex:1;display:flex;flex-direction:column;gap:16px;">
+
+    <div class="form-section">
+      <h4>许可证告警</h4>
+      <div class="field">
+        <label>过期告警天数</label>
+        <input type="number" name="expire_warn_days" value="{{ settings.expire_warn_days or '30' }}" min="1" max="365" form="settings-form">
+        <div class="form-text">license 到期前多少天仪表盘告警</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>邮件通知</h4>
+      <div class="field">
+        <label>SMTP 服务器</label>
+        <input type="text" name="smtp_host" value="{{ settings.smtp_host or '' }}" form="settings-form" placeholder="例如: smtp.qq.com">
+      </div>
+      <div class="field">
+        <label>SMTP 端口</label>
+        <input type="text" name="smtp_port" value="{{ settings.smtp_port or '587' }}" form="settings-form">
+      </div>
+      <div class="field">
+        <label>发件邮箱</label>
+        <input type="text" name="smtp_user" value="{{ settings.smtp_user or '' }}" form="settings-form" placeholder="例如: licman@company.com">
+      </div>
+      <div class="field">
+        <label>邮箱密码/授权码</label>
+        <input type="password" name="smtp_pass" value="{{ settings.smtp_pass or '' }}" form="settings-form">
+      </div>
+      <div class="field">
+        <label>收件人</label>
+        <input type="text" name="smtp_to" value="{{ settings.smtp_to or '' }}" form="settings-form" placeholder="例如: admin@company.com">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn btn-primary" form="settings-form">保存所有设置</button>
+        <button type="button" class="btn btn-outline" onclick="testNotify()">发送测试邮件</button>
+      </div>
+      <div id="notify-result" style="margin-top:8px;font-size:11px;font-family:var(--mono);"></div>
+    </div>
+
+    <div class="form-section">
+      <h4>数据备份</h4>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-primary" onclick="exportBackup()">&#128190; 导出备份</button>
+        <button class="btn btn-outline" onclick="snapshotUsage()">&#128200; 记录用量快照</button>
+      </div>
+      <div style="margin-top:10px;">
+        <label class="btn btn-outline" style="cursor:pointer;">
+          &#128229; 导入还原
+          <input type="file" id="backup-file" accept=".json" style="display:none" onchange="importBackup()">
+        </label>
+        <select id="import-mode" style="margin-left:8px;padding:5px 8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px;">
+          <option value="merge">合并</option><option value="replace">替换</option>
+        </select>
+      </div>
+      <div style="margin-top:8px;">
+        <a href="/api/report/csv" class="btn btn-outline">&#128196; 导出 CSV 报表</a>
+      </div>
+      <div id="backup-result" style="margin-top:8px;font-size:11px;font-family:var(--mono);"></div>
+    </div>
+  </div>
+
+  <div class="command-preview">
+    <h4>使用说明</h4>
+    <div style="font-size:11px;color:var(--text-dim);line-height:1.8;">
+      <p><b>SMTP 端口:</b> 587 (STARTTLS) 或 465 (SSL)</p>
+      <p><b>用量快照:</b> 手动记录当前时刻所有运行中 license 的 feature 用量。建议配合 cron 定时调用 <code style="color:var(--green);">curl -s /api/usage/snapshot</code></p>
+      <p><b>使用率:</b> 在"使用率"页面查看各厂商/Feature 用量变化</p>
+      <form id="settings-form" style="display:none;"></form>
+    </div>
+  </div>
+</div>
+{% endblock %}

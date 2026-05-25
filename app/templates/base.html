@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>License Manager</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%231a1b26'/><text x='16' y='22' text-anchor='middle' font-size='18' font-family='monospace' fill='%237aa2f7'>L</text></svg>">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="topnav">
+  <a href="{{ url_for('dashboard') }}" class="topnav-brand"><span>&#9670;</span> License Manager</a>
+  <div class="topnav-links">
+    <a href="{{ url_for('dashboard') }}" class="topnav-link {% if request.path == '/' %}active{% endif %}">仪表盘</a>
+    <a href="{{ url_for('vendor_page') }}" class="topnav-link {% if request.path.startswith('/vendors') %}active{% endif %}">厂商</a>
+    <a href="{{ url_for('monitor') }}" class="topnav-link {% if request.path.startswith('/monitor') %}active{% endif %}">监控</a>
+    <a href="{{ url_for('logs_page') }}" class="topnav-link {% if request.path == '/logs' %}active{% endif %}">日志</a>
+    <a href="{{ url_for('host_page') }}" class="topnav-link {% if request.path.startswith('/hosts') %}active{% endif %}">主机</a>
+    <a href="{{ url_for('terminal') }}" class="topnav-link {% if request.path == '/terminal' %}active{% endif %}">终端</a>
+    <a href="{{ url_for('trends_page') }}" class="topnav-link {% if request.path == '/usage' %}active{% endif %}">使用率</a>
+    <a href="{{ url_for('settings_page') }}" class="topnav-link {% if request.path == '/settings' %}active{% endif %}">设置</a>
+  </div>
+</nav>
+<main class="content">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- 文件浏览器 -->
+<div class="modal" id="browser-modal">
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <h3>选择文件</h3>
+      <button class="modal-close" onclick="closeModal('browser-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="browser-nav">
+        <input type="text" id="browser-path-input" class="browser-path-input" placeholder="输入路径后回车跳转...">
+      </div>
+      <div class="browser-nav">
+        <button class="btn btn-sm btn-outline" onclick="browseUp()">&uarr; 上级</button>
+        <span class="browser-path" id="browser-path">/</span>
+      </div>
+      <div class="browser-filter">
+        <input type="text" id="browser-filter" placeholder="筛选文件..." oninput="filterBrowser()">
+      </div>
+      <table class="browser-table">
+        <thead><tr><th>名称</th><th>大小</th><th>修改时间</th></tr></thead>
+        <tbody id="browser-body"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="browser-select-btn">选择</button>
+      <button class="btn btn-outline" onclick="closeModal('browser-modal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑主机模态框 -->
+<div class="modal" id="host-edit-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="host-edit-title">编辑主机</h3>
+      <button class="modal-close" onclick="closeModal('host-edit-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="host-edit-form">
+        <input type="hidden" name="host_id" id="host-edit-id">
+        <div class="field"><label>名称</label><input type="text" id="host-edit-name" name="name" required></div>
+        <div class="field"><label>主机名 / IP</label><input type="text" id="host-edit-hostname" name="hostname" required></div>
+        <div class="field"><label>SSH 端口</label><input type="text" id="host-edit-port" name="port" value="22"></div>
+        <div class="field"><label>用户名</label><input type="text" id="host-edit-username" name="username" value="root"></div>
+        <div class="field"><label>密码</label><input type="password" id="host-edit-password" name="auth_value" placeholder="留空表示不修改"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveHostModal()">保存</button>
+      <button class="btn btn-outline" onclick="closeModal('host-edit-modal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑厂商模态框 -->
+<div class="modal" id="vendor-edit-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="vendor-edit-title">编辑厂商</h3>
+      <button class="modal-close" onclick="closeModal('vendor-edit-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="vendor-edit-form">
+        <input type="hidden" name="id" id="vendor-edit-id">
+        <div class="field"><label>Daemon 名称</label><input type="text" id="vendor-edit-daemon" name="daemon_name" required></div>
+        <div class="field"><label>厂商名称</label><input type="text" id="vendor-edit-vname" name="vendor_name" required></div>
+        <div class="field"><label>所属主机</label><select name="host_id" id="vendor-edit-host"></select></div>
+        <div class="field"><label>默认 Daemon 路径 (写入第3列)</label><input type="text" id="vendor-edit-path" name="default_daemon_path"></div>
+        <div class="field"><label>默认 Exclude/Options 文件 (写入第4列)</label><input type="text" id="vendor-edit-exclude" name="default_exclude_path" placeholder="例如: /opt/licman/exclude/snpslmd.opt"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveVendorModal()">保存</button>
+      <button class="btn btn-outline" onclick="closeModal('vendor-edit-modal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

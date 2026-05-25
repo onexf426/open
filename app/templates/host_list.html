@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h2>主机管理</h2>
+</div>
+
+<div class="section">
+  <div class="card-list" id="host-list">
+    {% for h in hosts %}
+    <div class="config-card" id="host-{{ h.id }}">
+      <div class="config-info">
+        <div class="config-name">{{ h.name }}</div>
+        <div class="config-meta">
+          <span>{{ h.hostname }}:{{ h.port }}</span>
+          <span>{{ h.username }}</span>
+          <span>{% if h.status == 'online' %}<span class="host-status online">online</span>{% elif h.status == 'offline' %}<span class="host-status offline">offline</span>{% else %}<span style="color:var(--text-muted);font-size:10px;">未检测</span>{% endif %}</span>
+        </div>
+      </div>
+      <div class="config-actions">
+        <button class="btn btn-sm btn-outline" onclick="testHost({{ h.id }})">测试连接</button>
+        <button class="btn btn-sm btn-outline" onclick="editHost({{ h.id }}, '{{ h.name }}', '{{ h.hostname }}', {{ h.port }}, '{{ h.username }}')">编辑</button>
+        <button class="btn btn-sm btn-outline" onclick="deleteHost({{ h.id }})">删除</button>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">暂无注册主机。</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="section">
+  <h3>添加主机</h3>
+  <form class="config-form" id="host-form" style="max-width:520px;">
+    <input type="hidden" name="id" id="host-id">
+    <div class="field">
+      <label>名称</label>
+      <input type="text" name="name" id="host-name" required placeholder="例如: EDA-Server-01">
+    </div>
+    <div class="field">
+      <label>主机名 / IP</label>
+      <input type="text" name="hostname" id="host-hostname" required placeholder="例如: 192.168.1.100">
+    </div>
+    <div class="field">
+      <label>SSH 端口</label>
+      <input type="text" name="port" id="host-port" value="22">
+    </div>
+    <div class="field">
+      <label>用户名</label>
+      <input type="text" name="username" id="host-username" value="root">
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input type="password" name="auth_value" id="host-password" placeholder="SSH 登录密码">
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">添加主机</button>
+      <button type="button" class="btn btn-outline" onclick="resetHostForm()">重置</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
